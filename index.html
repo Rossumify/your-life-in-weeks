@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Life in Weeks</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Suisse+Intl:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0a0a0a;
+    --ink-soft: #3a3a3a;
+    --ink-faint: #999;
+    --paper: #f7f4ef;
+    --accent: #c8a96e;
+    --lived: #0a0a0a;
+    --future: transparent;
+    --dot: 7px;
+    --gap: 3px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Suisse Intl', 'Helvetica Neue', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+  }
+
+  /* ── INTRO SCREEN ── */
+  #intro {
+    position: fixed; inset: 0;
+    background: var(--paper);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    padding: 2rem;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  #intro.gone {
+    opacity: 0;
+    transform: translateY(-24px);
+    pointer-events: none;
+  }
+
+  .eyebrow {
+    font-size: 0.65rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 2.5rem;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    font-weight: 400;
+    line-height: 1.12;
+    text-align: center;
+    max-width: 640px;
+    margin-bottom: 1.2rem;
+  }
+  h1 em { font-style: italic; color: var(--ink-soft); }
+
+  .subtitle {
+    font-size: 0.9rem;
+    color: var(--ink-faint);
+    text-align: center;
+    max-width: 380px;
+    line-height: 1.7;
+    margin-bottom: 3.5rem;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    overflow: hidden;
+    width: 100%;
+    max-width: 360px;
+  }
+  .input-row input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0.9rem 1.2rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 300;
+    color: var(--ink);
+    letter-spacing: 0.04em;
+  }
+  .input-row input::placeholder { color: var(--ink-faint); }
+  .input-row button {
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 0.9rem 1.4rem;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .input-row button:hover { background: #222; }
+
+  .fine-print {
+    margin-top: 1.5rem;
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    letter-spacing: 0.03em;
+  }
+
+  /* ── MAIN RESULT ── */
+  #result {
+    opacity: 0;
+    transition: opacity 1s ease 0.3s;
+    min-height: 100vh;
+    padding: 5vh 5vw 8vh;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  #result.visible { opacity: 1; }
+
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid rgba(0,0,0,0.12);
+    padding-bottom: 2rem;
+    margin-bottom: 3.5rem;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+
+  .result-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+    font-weight: 400;
+    line-height: 1.2;
+  }
+  .result-header h2 span {
+    display: block;
+    font-size: 0.8rem;
+    font-family: 'Suisse Intl', sans-serif;
+    font-weight: 300;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-pill {
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    text-align: right;
+    line-height: 2;
+  }
+  .stat-pill strong {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 400;
+    font-style: italic;
+    color: var(--ink);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* ── GRID ── */
+  #grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap);
+    margin-bottom: 3rem;
+  }
+
+  .week-dot {
+    width: var(--dot);
+    height: var(--dot);
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    cursor: default;
+  }
+  .week-dot.lived {
+    background: var(--lived);
+  }
+  .week-dot.current {
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .week-dot.future {
+    background: transparent;
+    border: 1px solid rgba(0,0,0,0.18);
+  }
+  .week-dot:hover {
+    transform: scale(1.8);
+    opacity: 0.7;
+    z-index: 10;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(200, 169, 110, 0.6); }
+    50% { box-shadow: 0 0 0 4px rgba(200, 169, 110, 0); }
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    margin-bottom: 4rem;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── STATS STRIP ── */
+  .stats-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0;
+    border: 1px solid rgba(0,0,0,0.12);
+    margin-bottom: 4rem;
+    overflow: hidden;
+  }
+  .stat-box {
+    padding: 2rem 1.8rem;
+    border-right: 1px solid rgba(0,0,0,0.12);
+  }
+  .stat-box:last-child { border-right: none; }
+  .stat-box .label {
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 0.8rem;
+  }
+  .stat-box .value {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--ink);
+  }
+  .stat-box .unit {
+    font-size: 0.75rem;
+    color: var(--ink-faint);
+    margin-top: 0.3rem;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── REFLECTION ── */
+  .reflection {
+    max-width: 560px;
+    margin-bottom: 5rem;
+  }
+  .reflection blockquote {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: clamp(1.1rem, 2.2vw, 1.4rem);
+    line-height: 1.65;
+    color: var(--ink-soft);
+    position: relative;
+    padding-left: 1.8rem;
+    border-left: 2px solid var(--accent);
+  }
+
+  /* ── SHARE ── */
+  .share-section {
+    border-top: 1px solid rgba(0,0,0,0.12);
+    padding-top: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+  .share-text {
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    max-width: 280px;
+    line-height: 1.8;
+  }
+  .share-text strong {
+    display: block;
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    font-style: italic;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink);
+    margin-bottom: 0.3rem;
+  }
+
+  .btn-row { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+
+  .btn {
+    padding: 0.75rem 1.6rem;
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn:hover, .btn.primary { background: var(--ink); color: var(--paper); }
+  .btn.primary:hover { background: #333; }
+
+  /* ── TOOLTIP ── */
+  #tooltip {
+    position: fixed;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 0.7rem;
+    padding: 0.45rem 0.8rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    letter-spacing: 0.06em;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  #tooltip.show { opacity: 1; }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 3rem 2rem;
+    border-top: 1px solid rgba(0,0,0,0.08);
+    margin-top: 2rem;
+  }
+
+  @media (max-width: 600px) {
+    :root { --dot: 5px; --gap: 2px; }
+    .stats-strip { grid-template-columns: 1fr 1fr; }
+    .stat-box:nth-child(even) { border-right: none; }
+    .stat-box:nth-child(3), .stat-box:nth-child(4) { border-top: 1px solid rgba(0,0,0,0.12); }
+  }
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<div id="intro">
+  <p class="eyebrow">A meditation on time</p>
+  <h1>Your life,<br><em>one week at a time.</em></h1>
+  <p class="subtitle">A 90-year life is just 4,680 weeks. See how many you've lived — and how many remain.</p>
+  <div class="input-row">
+    <input type="date" id="dob" placeholder="Your birthdate" />
+    <button onclick="reveal()">Reveal</button>
+  </div>
+  <p class="fine-print">No data stored. Everything runs in your browser.</p>
+</div>
+
+<!-- RESULT -->
+<div id="result">
+  <div class="result-header">
+    <h2>
+      <span>The life of</span>
+      <span id="name-display">You</span>
+    </h2>
+    <div class="stat-pill">
+      <strong id="pct-display">—</strong>
+      of your weeks have passed
+    </div>
+  </div>
+
+  <div id="grid"></div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--lived)"></div>
+      Weeks lived
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--accent)"></div>
+      This week
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:transparent; border:1px solid rgba(0,0,0,0.25)"></div>
+      Weeks ahead
+    </div>
+  </div>
+
+  <div class="stats-strip">
+    <div class="stat-box">
+      <div class="label">Weeks lived</div>
+      <div class="value" id="stat-lived">—</div>
+      <div class="unit">of 4,680 total</div>
+    </div>
+    <div class="stat-box">
+      <div class="label">Weeks remaining</div>
+      <div class="value" id="stat-remaining">—</div>
+      <div class="unit">if you live to 90</div>
+    </div>
+    <div class="stat-box">
+      <div class="label">Summers left</div>
+      <div class="value" id="stat-summers">—</div>
+      <div class="unit">approximately</div>
+    </div>
+    <div class="stat-box">
+      <div class="label">Mondays left</div>
+      <div class="value" id="stat-mondays">—</div>
+      <div class="unit">fresh starts remaining</div>
+    </div>
+  </div>
+
+  <div class="reflection">
+    <blockquote id="quote-display">
+      The most precious resource we all have is time.
+    </blockquote>
+  </div>
+
+  <div class="share-section">
+    <div class="share-text">
+      <strong>Worth sharing.</strong>
+      Send this to someone you love. It takes 10 seconds to make them think for a week.
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="copyLink()">Copy Link</button>
+      <button class="btn" onclick="shareTwitter()">Share on X</button>
+      <button class="btn" onclick="restart()">Start Over</button>
+    </div>
+  </div>
+
+  <footer>
+    Your life in weeks &nbsp;·&nbsp; Inspired by Tim Urban's "Wait But Why" &nbsp;·&nbsp; All calculations local
+  </footer>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+  const TOTAL_WEEKS = 4680; // 90 years
+  const quotes = [
+    "The most precious resource we all have is time.",
+    "We have two lives — the second begins when we realize we only have one.",
+    "Do not squander time, for that is the stuff life is made of.",
+    "One day you will wake up and there won't be any more time to do the things you've always wanted. Do it now.",
+    "The trouble is, you think you have time.",
+    "It is not that we have a short time to live, but that we waste a great deal of it.",
+  ];
+
+  let weeksLived = 0;
+
+  function reveal() {
+    const dobInput = document.getElementById('dob').value;
+    if (!dobInput) {
+      document.getElementById('dob').style.outline = '2px solid var(--accent)';
+      return;
+    }
+
+    const dob = new Date(dobInput);
+    const now = new Date();
+    const msPerWeek = 1000 * 60 * 60 * 24 * 7;
+    weeksLived = Math.floor((now - dob) / msPerWeek);
+
+    if (weeksLived < 0 || weeksLived > TOTAL_WEEKS + 1000) {
+      alert('Please enter a valid birthdate.');
+      return;
+    }
+
+    // Build grid
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < TOTAL_WEEKS; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'week-dot ' + (i < weeksLived ? 'lived' : i === weeksLived ? 'current' : 'future');
+
+      const yr = Math.floor(i / 52) + 1;
+      const wk = (i % 52) + 1;
+      dot.dataset.tip = `Year ${yr}, Week ${wk}`;
+      dot.addEventListener('mouseenter', showTip);
+      dot.addEventListener('mouseleave', hideTip);
+      dot.addEventListener('mousemove', moveTip);
+      fragment.appendChild(dot);
+    }
+    grid.appendChild(fragment);
+
+    // Stats
+    const remaining = TOTAL_WEEKS - weeksLived;
+    const age = Math.floor((now - dob) / (1000 * 60 * 60 * 24 * 365.25));
+    const pct = Math.round((weeksLived / TOTAL_WEEKS) * 100);
+
+    document.getElementById('stat-lived').textContent = weeksLived.toLocaleString();
+    document.getElementById('stat-remaining').textContent = remaining.toLocaleString();
+    document.getElementById('stat-summers').textContent = Math.max(0, 90 - age);
+    document.getElementById('stat-mondays').textContent = remaining.toLocaleString();
+    document.getElementById('pct-display').textContent = pct + '%';
+    document.getElementById('quote-display').textContent = quotes[Math.floor(Math.random() * quotes.length)];
+
+    // Hide intro
+    document.getElementById('intro').classList.add('gone');
+
+    // Show result
+    setTimeout(() => {
+      const result = document.getElementById('result');
+      result.classList.add('visible');
+      result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+
+    // Store dob in URL
+    const url = new URL(window.location.href);
+    url.searchParams.set('dob', dobInput);
+    history.replaceState(null, '', url);
+  }
+
+  function restart() {
+    document.getElementById('intro').classList.remove('gone');
+    document.getElementById('result').classList.remove('visible');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Tooltip
+  const tip = document.getElementById('tooltip');
+  function showTip(e) { tip.textContent = e.target.dataset.tip; tip.classList.add('show'); }
+  function hideTip() { tip.classList.remove('show'); }
+  function moveTip(e) { tip.style.left = (e.clientX + 14) + 'px'; tip.style.top = (e.clientY - 28) + 'px'; }
+
+  // Share
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      const btn = event.target;
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy Link', 2000);
+    });
+  }
+  function shareTwitter() {
+    const pct = document.getElementById('pct-display').textContent;
+    const text = encodeURIComponent(`I've lived ${pct} of my weeks. This is a profoundly simple visualization of your life. See yours →`);
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(window.location.href)}`, '_blank');
+  }
+
+  // Auto-reveal if DOB in URL
+  window.addEventListener('load', () => {
+    const params = new URLSearchParams(window.location.search);
+    const dob = params.get('dob');
+    if (dob) {
+      document.getElementById('dob').value = dob;
+      reveal();
+    }
+  });
+</script>
+</body>
+</html>
